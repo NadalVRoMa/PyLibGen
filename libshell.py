@@ -1,6 +1,7 @@
 import argparse
 import urllib.request as req
-import bs4
+from bs4 import BeautifulSoup
+import re
 import os
 from tabulate import tabulate
 from settings import *
@@ -34,7 +35,13 @@ def getSearchResults(term, page, column='def'):
         term, column, str(page))
 
     source = req.urlopen(url)
-    soup = bs4.BeautifulSoup(source, 'lxml')
+    soup = BeautifulSoup(source, 'lxml')
+    if page == 1:
+        books_found = re.search(r'(\d+) books found', str(soup))
+        print(books_found.group().upper())
+        if int(books_found.groups()[0]) == 0:
+            return(False)
+        
     page_books = soup.find_all('tr')
     page_books = page_books[3:-1]  # Ignore 3 first and the last <tr> label.
     books = page_books
@@ -109,7 +116,7 @@ def selectBook(books, mirrors, page, end=False):
 
 def downloadBook(link, filename):
     source = req.urlopen(link)
-    soup = bs4.BeautifulSoup(source, 'lxml')
+    soup = BeautifulSoup(source, 'lxml')
 
     for a in soup.find_all('a'):
         if a.text == 'GET':
@@ -144,5 +151,7 @@ if __name__ == '__main__':
             mirrors += new_mirrors
             get_next_page = selectBook(books, mirrors, page)
             page += 1
-        else:
+        elif raw_books == []: # 0 matches in the last page 
             get_next_page = selectBook(books, mirrors, page - 1, end=True)
+        else: # 0 matches total
+            get_next_page = False
