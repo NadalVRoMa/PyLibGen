@@ -13,21 +13,7 @@ global MAX_CHARS_PUBLISHER
 global MAX_CHARS_TITLE
 global N_AUTHORS
 
-def replaceSymbols(term):
-    replace_dic = {' ': '%20', '$': '%24', '&': '%26', '`': '%60',
-                   ':': '%3A', '<': '%3C', '>': '%3E', '[': '%5B',
-                   ']': '%5D', '{': '%7B', '}': '%7D', '"': '%22', 
-                   '+': '%2B', '#': '%23', '%': '%25', '@': '%40',
-                   '/': '%2F', ';': '%3B', '=': '%3D', '?': '%3F',
-                   '\\': '%5C', '^': '%5E', '|': '%7C', '~': '%7E', 
-                   "'": '%27', ',': '%2C'}
-
-    for symbol, escape in replace_dic.items():
-        term = term.replace(symbol, escape)
-
-    return(term)
-
-def getSearchResults(term, page, column='def'):
+def getSearchResults(term, page, column):
     if not term.isalpha():
         term = replaceSymbols(term)
 
@@ -133,10 +119,41 @@ def downloadBook(link, filename):
     else:
         print('The download path does not exist. Change it in settings.py')
 
+def replaceSymbols(term):
+    replace_dic = {' ': '%20', '$': '%24', '&': '%26', '`': '%60',
+                   ':': '%3A', '<': '%3C', '>': '%3E', '[': '%5B',
+                   ']': '%5D', '{': '%7B', '}': '%7D', '"': '%22', 
+                   '+': '%2B', '#': '%23', '%': '%25', '@': '%40',
+                   '/': '%2F', ';': '%3B', '=': '%3D', '?': '%3F',
+                   '\\': '%5C', '^': '%5E', '|': '%7C', '~': '%7E', 
+                   "'": '%27', ',': '%2C'}
+
+    for symbol, escape in replace_dic.items():
+        term = term.replace(symbol, escape)
+
+    return(term)
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--search', required=True, dest='search_term')
+    column = parser.add_mutually_exclusive_group()
+    parser.add_argument('search', help='search term')
+    column.add_argument('-t', '--title', action='store_true', help='get books from the specified title')
+    column.add_argument('-a', '--author', action='store_true', help='get books from the specified author')
+    column.add_argument('-p', '--publisher', action='store_true', help='get books from the specified publisher')
+    column.add_argument('-y', '--year', action='store_true', help='get books from the specified year')
+
     args = parser.parse_args()
+
+    if args.title:
+        sel_column = 'title'
+    elif args.author:
+        sel_column = 'author'
+    elif args.publisher:
+        sel_column = 'publisher'
+    elif args.year:
+        sel_column = 'year'
+    else:
+        sel_column = 'def'
 
     books = []
     mirrors = []
@@ -144,7 +161,7 @@ if __name__ == '__main__':
     get_next_page = True
 
     while get_next_page:
-        raw_books = getSearchResults(args.search_term, page)
+        raw_books = getSearchResults(args.search, page, sel_column)
         if raw_books:
             new_books, new_mirrors = formatBooks(raw_books, page)
             books += new_books
