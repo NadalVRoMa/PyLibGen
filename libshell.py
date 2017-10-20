@@ -7,7 +7,7 @@ from settings import *
 
 # Settings as global variables
 global DOWNLOAD_PATH
-global MAX_CHARS_AUTHOR
+global MAX_CHARS_AUTHORS
 global MAX_CHARS_PUBLISHER
 global MAX_CHARS_TITLE
 global N_AUTHORS
@@ -54,10 +54,10 @@ def formatBooks(books, page):
         authors = book_attrs[1].find_all('a')
         authors = [a.text for a in authors]
         author = ', '.join(authors[:N_AUTHORS])
-        author = author[:MAX_CHARS_AUTHOR]
+        author = author[:MAX_CHARS_AUTHORS]
 
         title = book_attrs[2].find(title=True).text
-        tinytitle = title[:MAX_CHARS_AUTHOR]
+        tinytitle = title[:MAX_CHARS_TITLE]
 
         publisher = book_attrs[3].text[:MAX_CHARS_PUBLISHER]
         year = book_attrs[4].text
@@ -118,8 +118,8 @@ def downloadBook(link, filename):
 
     if os.path.exists(DOWNLOAD_PATH) and os.path.isdir(DOWNLOAD_PATH):
         print('Downloading...')
-        req.urlretrieve(download_url, filename=filename)
-        path = '{}/{}'.format(o, filename)
+        path = '{}/{}'.format(DOWNLOAD_PATH, filename)
+        req.urlretrieve(download_url, filename=path)
         print('Book downloaded to {}'.format(path))
     elif os.path.isfile(DOWNLOAD_PATH):
         print('The download path is not a directory. Change it in settings.py')
