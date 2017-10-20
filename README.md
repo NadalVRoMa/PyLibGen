@@ -1,5 +1,5 @@
 # PyLibGen
-A python3 script to download books from libgen.io.
+A python3 script to download books from libgen.io
 
 ### Install
 
