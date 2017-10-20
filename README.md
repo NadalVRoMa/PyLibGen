@@ -11,12 +11,18 @@ To install the required dependencies:
 ### Usage
 
 ```
-usage: libshell.py [-h] -s SEARCH_TERM
+usage: pylibgen.py [-h] [-t | -a | -p | -y] search
+
+positional arguments:
+  search           search term
 
 optional arguments:
-  -h, --help            show this help message and exit
-  -s SEARCH_TERM, --search SEARCH_TERM
-  ```
+  -h, --help       show this help message and exit
+  -t, --title      get books from the specified title
+  -a, --author     get books from the specified author
+  -p, --publisher  get books from the specified publisher
+  -y, --year       get books from the specified year
+```
 
 ### Settings
 
