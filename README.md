@@ -18,3 +18,8 @@ optional arguments:
   -s SEARCH_TERM, --search SEARCH_TERM
   ```
 
+### Settings
+
+You can easily tweak some stuff about the display changing the variables in ``settings.py``, like the number of authors showed, maximum lenght of different columns, etc.
+
+**Happy Reading!**
