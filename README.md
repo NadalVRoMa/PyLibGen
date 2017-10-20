@@ -1,4 +1,4 @@
-# libshell.py
+# PyLibGen
 A python3 script to download books from libgen.io.
 
 ### Install
