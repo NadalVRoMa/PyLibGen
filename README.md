@@ -30,6 +30,6 @@ The default download path for the books is set to the directory from where you r
 
 ### Screenshot
 
-(https://i.imgur.com/FCLF4OQ.jpg)
+![](https://i.imgur.com/FCLF4OQ.jpg)
 
 **Happy Reading!**
