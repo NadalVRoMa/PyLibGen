@@ -26,6 +26,6 @@ optional arguments:
 
 ### Settings
 
-You can easily tweak some stuff about the display changing the variables in ``settings.py``, like the number of authors showed, maximum lenght of different columns, etc.
+The default download path for the books is set to the directory from where you run the script. You can easily tweak this and some other options changing the variable's values in ``settings.py``.
 
 **Happy Reading!**
