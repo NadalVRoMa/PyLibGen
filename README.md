@@ -28,4 +28,8 @@ optional arguments:
 
 The default download path for the books is set to the directory from where you run the script. You can easily tweak this and some other options changing the variable's values in ``settings.py``.
 
+### Screenshot
+
+(https://i.imgur.com/FCLF4OQ.jpg)
+
 **Happy Reading!**
