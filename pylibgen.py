@@ -1,43 +1,35 @@
 import argparse
-import urllib.request as req
-from bs4 import BeautifulSoup
 import re
 import os
+from urllib import request
+from urllib.parse import urlencode
 from tabulate import tabulate
+from bs4 import BeautifulSoup
 from settings import *
 
-# Settings as global variables
-global DOWNLOAD_PATH
-global MAX_CHARS_AUTHORS
-global MAX_CHARS_PUBLISHER
-global MAX_CHARS_TITLE
-global N_AUTHORS
 
 def getSearchResults(term, page, column):
-    if not term.isalpha():
-        term = replaceSymbols(term)
+    params = urlencode({'req': term, 'column': column, 'page': page})
+    url = 'http://libgen.io/search.php?&%s' %params
 
-    url = 'http://libgen.io/search.php?&req={}&column={}&page={}'.format(
-        term, column, str(page))
-
-    source = req.urlopen(url)
+    source = request.urlopen(url)
     soup = BeautifulSoup(source, 'lxml')
     if page == 1:
         books_found = re.search(r'(\d+) books found', str(soup))
         print(books_found.group().upper())
         if int(books_found.groups()[0]) == 0:
             return(False)
-        
+
     page_books = soup.find_all('tr')
     page_books = page_books[3:-1]  # Ignore 3 first and the last <tr> label.
     books = page_books
     return(books)
 
 
-def formatBooks(books, page):
+def formatBooks(books, page, n_authors, mc_authors, mc_title, mc_publisher):
     # TODO: Add support for multiple choices
     fmt_books = []
-    books_mirrors = [] # List of dics with complete titles and mirrors
+    books_mirrors = []  # List of dics with complete titles and mirrors
 
     for i, rawbook in enumerate(books):
         i += (page - 1) * 25
@@ -46,13 +38,13 @@ def formatBooks(books, page):
 
         authors = book_attrs[1].find_all('a')
         authors = [a.text for a in authors]
-        author = ', '.join(authors[:N_AUTHORS])
-        author = author[:MAX_CHARS_AUTHORS]
+        author = ', '.join(authors[:n_authors])
+        author = author[:mc_authors]
 
         title = book_attrs[2].find(title=True).text
-        tinytitle = title[:MAX_CHARS_TITLE]
+        tinytitle = title[:mc_title]
 
-        publisher = book_attrs[3].text[:MAX_CHARS_PUBLISHER]
+        publisher = book_attrs[3].text[:mc_publisher]
         year = book_attrs[4].text
         lang = book_attrs[6].text[:2]  # Show only 2 first characters
         size = book_attrs[7].text
@@ -70,7 +62,7 @@ def formatBooks(books, page):
     return(fmt_books, books_mirrors)
 
 
-def selectBook(books, mirrors, page, end=False):
+def selectBook(books, mirrors, page, down_path, end=False):
     headers = ['#', 'Author', 'Title', 'Publisher',
                'Year', 'Lang', 'Ext', 'Size']
 
@@ -86,8 +78,9 @@ def selectBook(books, mirrors, page, end=False):
         if elec.isnumeric():
             choice = int(elec) - 1
             if choice < len(books):  # Selection
-                title = '{}.{}'.format(mirrors[choice]['title'], books[choice][-2])
-                downloadBook(mirrors[choice]['io'], title)
+                title = '{}.{}'.format(
+                    mirrors[choice]['title'], books[choice][-2])
+                downloadBook(mirrors[choice]['io'], title, down_path)
                 return(False)
             else:
                 print("Too big of a number.")
@@ -100,8 +93,8 @@ def selectBook(books, mirrors, page, end=False):
             return(True)
 
 
-def downloadBook(link, filename):
-    source = req.urlopen(link)
+def downloadBook(link, filename, down_path):
+    source = request.urlopen(link)
     soup = BeautifulSoup(source, 'lxml')
 
     for a in soup.find_all('a'):
@@ -109,38 +102,30 @@ def downloadBook(link, filename):
             download_url = a.attrs['href']
             break
 
-    if os.path.exists(DOWNLOAD_PATH) and os.path.isdir(DOWNLOAD_PATH):
+    if os.path.exists(down_path) and os.path.isdir(down_path):
         print('Downloading...')
-        path = '{}/{}'.format(DOWNLOAD_PATH, filename)
-        req.urlretrieve(download_url, filename=path)
-        print('Book downloaded to {}'.format(path))
-    elif os.path.isfile(DOWNLOAD_PATH):
+        path = '{}/{}'.format(down_path, filename)
+        request.urlretrieve(download_url, filename=path)
+        print('Book downloaded to {}'.format(os.path.abspath(path)))
+    elif os.path.isfile(down_path):
         print('The download path is not a directory. Change it in settings.py')
     else:
         print('The download path does not exist. Change it in settings.py')
 
-def replaceSymbols(term):
-    replace_dic = {' ': '%20', '$': '%24', '&': '%26', '`': '%60',
-                   ':': '%3A', '<': '%3C', '>': '%3E', '[': '%5B',
-                   ']': '%5D', '{': '%7B', '}': '%7D', '"': '%22', 
-                   '+': '%2B', '#': '%23', '%': '%25', '@': '%40',
-                   '/': '%2F', ';': '%3B', '=': '%3D', '?': '%3F',
-                   '\\': '%5C', '^': '%5E', '|': '%7C', '~': '%7E', 
-                   "'": '%27', ',': '%2C'}
 
-    for symbol, escape in replace_dic.items():
-        term = term.replace(symbol, escape)
-
-    return(term)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     column = parser.add_mutually_exclusive_group()
     parser.add_argument('search', help='search term')
-    column.add_argument('-t', '--title', action='store_true', help='get books from the specified title')
-    column.add_argument('-a', '--author', action='store_true', help='get books from the specified author')
-    column.add_argument('-p', '--publisher', action='store_true', help='get books from the specified publisher')
-    column.add_argument('-y', '--year', action='store_true', help='get books from the specified year')
+    column.add_argument('-t', '--title', action='store_true',
+                        help='get books from the specified title')
+    column.add_argument('-a', '--author', action='store_true',
+                        help='get books from the specified author')
+    column.add_argument('-p', '--publisher', action='store_true',
+                        help='get books from the specified publisher')
+    column.add_argument('-y', '--year', action='store_true',
+                        help='get books from the specified year')
 
     args = parser.parse_args()
 
@@ -163,12 +148,14 @@ if __name__ == '__main__':
     while get_next_page:
         raw_books = getSearchResults(args.search, page, sel_column)
         if raw_books:
-            new_books, new_mirrors = formatBooks(raw_books, page)
+            new_books, new_mirrors = formatBooks(
+                raw_books, page, N_AUTHORS, MAX_CHARS_AUTHORS, MAX_CHARS_TITLE, MAX_CHARS_PUBLISHER)
             books += new_books
             mirrors += new_mirrors
-            get_next_page = selectBook(books, mirrors, page)
+            get_next_page = selectBook(books, mirrors, page, DOWNLOAD_PATH)
             page += 1
-        elif raw_books == []: # 0 matches in the last page 
-            get_next_page = selectBook(books, mirrors, page - 1, end=True)
-        else: # 0 matches total
+        elif raw_books == []:  # 0 matches in the last page
+            get_next_page = selectBook(
+                books, mirrors, page - 1, DOWNLOAD_PATH, end=True)
+        else:  # 0 matches total
             get_next_page = False
