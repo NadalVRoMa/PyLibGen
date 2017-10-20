@@ -3,12 +3,35 @@ import urllib.request as req
 import bs4
 import os
 from tabulate import tabulate
+from settings import *
 
+# Settings as global variables
+global DOWNLOAD_PATH
+global MAX_CHARS_AUTHOR
+global MAX_CHARS_PUBLISHER
+global MAX_CHARS_TITLE
+global N_AUTHORS
+
+def replaceSymbols(term):
+    replace_dic = {' ': '%20', '$': '%24', '&': '%26', '`': '%60',
+                   ':': '%3A', '<': '%3C', '>': '%3E', '[': '%5B',
+                   ']': '%5D', '{': '%7B', '}': '%7D', '"': '%22', 
+                   '+': '%2B', '#': '%23', '%': '%25', '@': '%40',
+                   '/': '%2F', ';': '%3B', '=': '%3D', '?': '%3F',
+                   '\\': '%5C', '^': '%5E', '|': '%7C', '~': '%7E', 
+                   "'": '%27', ',': '%2C'}
+
+    for symbol, escape in replace_dic.items():
+        term = term.replace(symbol, escape)
+
+    return(term)
 
 def getSearchResults(term, page, column='def'):
+    if not term.isalpha():
+        term = replaceSymbols(term)
+
     url = 'http://libgen.io/search.php?&req={}&column={}&page={}'.format(
         term, column, str(page))
-    # URGENT : ESCAPE SYMBOLS!!
 
     source = req.urlopen(url)
     soup = bs4.BeautifulSoup(source, 'lxml')
@@ -27,10 +50,16 @@ def formatBooks(books, page):
         i += (page - 1) * 25
 
         book_attrs = rawbook.find_all('td')
-        author = book_attrs[1].a.text[:25]  # only first author
+
+        authors = book_attrs[1].find_all('a')
+        authors = [a.text for a in authors]
+        author = ', '.join(authors[:N_AUTHORS])
+        author = author[:MAX_CHARS_AUTHOR]
+
         title = book_attrs[2].find(title=True).text
-        tinytitle = title[:80]
-        publisher = book_attrs[3].text[:25]
+        tinytitle = title[:MAX_CHARS_AUTHOR]
+
+        publisher = book_attrs[3].text[:MAX_CHARS_PUBLISHER]
         year = book_attrs[4].text
         lang = book_attrs[6].text[:2]  # Show only 2 first characters
         size = book_attrs[7].text
@@ -87,11 +116,15 @@ def downloadBook(link, filename):
             download_url = a.attrs['href']
             break
 
-    print('Downloading...')
-    req.urlretrieve(download_url, filename=filename)
-    path = '{}/{}'.format(os.getcwd(), filename)
-    print('Book downloaded to {}'.format(path))
-
+    if os.path.exists(DOWNLOAD_PATH) and os.path.isdir(DOWNLOAD_PATH):
+        print('Downloading...')
+        req.urlretrieve(download_url, filename=filename)
+        path = '{}/{}'.format(o, filename)
+        print('Book downloaded to {}'.format(path))
+    elif os.path.isfile(DOWNLOAD_PATH):
+        print('The download path is not a directory. Change it in settings.py')
+    else:
+        print('The download path does not exist. Change it in settings.py')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
