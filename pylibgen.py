@@ -36,8 +36,7 @@ def formatBooks(books, page, n_authors, mc_authors, mc_title, mc_publisher):
 
         book_attrs = rawbook.find_all('td')
 
-        authors = book_attrs[1].find_all('a')
-        authors = [a.text for a in authors]
+        authors = [a.text for a in book_attrs[1].find_all('a')]
         author = ', '.join(authors[:n_authors])
         author = author[:mc_authors]
 
@@ -51,8 +50,8 @@ def formatBooks(books, page, n_authors, mc_authors, mc_title, mc_publisher):
         ext = book_attrs[8].text
         io_mirror = book_attrs[9].a.attrs['href']
 
-        book = [str(i + 1), author, tinytitle, publisher,
-                year, lang, ext, size]  # Start at 1
+        book = (str(i + 1), author, tinytitle, publisher,
+                year, lang, ext, size)  # Start at 1
 
         book_mirrors = {'title': title, 'io': io_mirror}
         books_mirrors.append(book_mirrors)
@@ -66,10 +65,10 @@ def selectBook(books, mirrors, page, down_path, end=False):
     headers = ['#', 'Author', 'Title', 'Publisher',
                'Year', 'Lang', 'Ext', 'Size']
 
-    if not end:
-        print(tabulate(books[(page - 1) * 25:page * 25], headers))
-    else:
+    if end:
         print('Sorry, no more matches.')
+    else:
+        print(tabulate(books[(page - 1) * 25:page * 25], headers))
 
     while True:
         elec = input(
@@ -92,6 +91,9 @@ def selectBook(books, mirrors, page, down_path, end=False):
         elif not elec:  # See more matches
             return(True)
 
+        else:
+            print('Not a valid option.')
+
 
 def downloadBook(link, filename, down_path):
     source = request.urlopen(link)
@@ -113,11 +115,10 @@ def downloadBook(link, filename, down_path):
         print('The download path does not exist. Change it in settings.py')
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     column = parser.add_mutually_exclusive_group()
-    parser.add_argument('search', help='search term')
+    parser.add_argument('search', nargs='+', help='search term')
     column.add_argument('-t', '--title', action='store_true',
                         help='get books from the specified title')
     column.add_argument('-a', '--author', action='store_true',
@@ -128,17 +129,17 @@ if __name__ == '__main__':
                         help='get books from the specified year')
 
     args = parser.parse_args()
+    
+    search_term = ' '.join(args.search)
+    search_arguments = [(args.title, 'title'),
+                        (args.author, 'author'),
+                        (args.publisher, 'publisher'),
+                        (args.year, 'year')]
 
-    if args.title:
-        sel_column = 'title'
-    elif args.author:
-        sel_column = 'author'
-    elif args.publisher:
-        sel_column = 'publisher'
-    elif args.year:
-        sel_column = 'year'
-    else:
-        sel_column = 'def'
+    sel_column = 'def'
+    for arg in search_arguments:
+        if arg[0]:
+            sel_column = arg[1]
 
     books = []
     mirrors = []
@@ -146,7 +147,7 @@ if __name__ == '__main__':
     get_next_page = True
 
     while get_next_page:
-        raw_books = getSearchResults(args.search, page, sel_column)
+        raw_books = getSearchResults(search_term, page, sel_column)
         if raw_books:
             new_books, new_mirrors = formatBooks(
                 raw_books, page, N_AUTHORS, MAX_CHARS_AUTHORS, MAX_CHARS_TITLE, MAX_CHARS_PUBLISHER)

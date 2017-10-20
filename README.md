@@ -11,7 +11,7 @@ To install the required dependencies:
 ### Usage
 
 ```
-usage: pylibgen.py [-h] [-t | -a | -p | -y] search
+usage: pylibgen.py [-h] [-t | -a | -p | -y] search [search ...]
 
 positional arguments:
   search           search term
