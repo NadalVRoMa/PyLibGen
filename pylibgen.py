@@ -17,13 +17,17 @@ def getSearchResults(term, page, column):
     if page == 1:
         books_found = re.search(r'(\d+) books found', str(soup))
         print(books_found.group().upper())
-        if int(books_found.groups()[0]) == 0:
+        n_books = int(books_found.groups()[0])
+        if n_books == 0:
             return(False)
 
     page_books = soup.find_all('tr')
     page_books = page_books[3:-1]  # Ignore 3 first and the last <tr> label.
     books = page_books
-    return(books)
+    if page == 1:
+        return(books, n_books)
+    else:
+        return(books)
 
 
 def formatBooks(books, page):
@@ -63,31 +67,36 @@ def formatBooks(books, page):
     return(fmt_books, books_mirrors)
 
 
-def selectBook(books, mirrors, page, end=False):
+def selectBook(books, mirrors, page, n_books):
     headers = ['#', 'Author', 'Title', 'Publisher',
                'Year', 'Lang', 'Ext', 'Size']
 
-    if end:
-        print('Sorry, no more matches.')
-    else:
-        print(tabulate(books[(page - 1) * 25:page * 25], headers))
+    print(tabulate(books[(page - 1) * 25:page * 25], headers))
+    # Detect when all the books are found.
+    no_more_matches = n_books == len(books)
+
+    if no_more_matches:
+        print("\nEND OF LIST. NO MORE BOOKS FOUND")
 
     while True:
-        elec = input(
-            '\n Type # of book to download, q to quit or just press Enter to see more matches: ')
+        if no_more_matches:
+            elec = input('Type # of book to download or q to quit: ')
+        else:
+            elec = input(
+                '\nType # of book to download, q to quit or just press Enter to see more matches: ')
 
         if elec.isnumeric():
             choice = int(elec) - 1
             if choice < len(books) and choice >= 0:  # Selection
                 title = '{}.{}'.format(
                     mirrors[choice]['title'], books[choice][-2])
-                    
-                if True:  
+
+                if True:
                     ''' This is the default mirror.
                     In the case we can get the other mirrors to work,
                     change True to a boolean variable defined in settings.py
                     that defines if the user want to have a option to 
-                    select from the different mirrors. ''' 
+                    select from the different mirrors. '''
                     DownloadBook.default_mirror(
                         mirrors[choice]['mirrors'][0], title)
                 else:
@@ -100,7 +109,7 @@ def selectBook(books, mirrors, page, end=False):
                     )
                     while True:
                         option = input(
-                            '\n Type # of mirror to start download, or q to quit: ')
+                            '\nType # of mirror to start download or q to quit: ')
 
                         if option.isnumeric() and int(option) > 0 and int(option) <= number_of_mirrors:
                             if int(option) == 1:
@@ -129,6 +138,7 @@ def selectBook(books, mirrors, page, end=False):
                             continue
 
                 return(False)
+
             else:
                 print("Couldn't fetch the book #{}".format(str(choice + 1)))
                 continue
@@ -136,8 +146,12 @@ def selectBook(books, mirrors, page, end=False):
         elif elec == 'q' or elec == 'Q':  # Quit
             return(False)
 
-        elif not elec:  # See more matches
-            return(True)
+        elif not elec:
+            if no_more_matches:
+                print('Not a valid option')
+                continue
+            else:
+                return(True)
 
         else:
             print('Not a valid option.')
@@ -229,14 +243,19 @@ if __name__ == '__main__':
     get_next_page = True
 
     while get_next_page:
-        raw_books = getSearchResults(search_term, page, sel_column)
+        if page == 1:
+            raw_books, n_books = getSearchResults(
+                search_term, page, sel_column)
+        else:
+            raw_books = getSearchResults(search_term, page, sel_column)
+
         if raw_books:
             new_books, new_mirrors = formatBooks(raw_books, page)
             books += new_books
             mirrors += new_mirrors
-            get_next_page = selectBook(books, mirrors, page)
+            get_next_page = selectBook(books, mirrors, page, n_books)
             page += 1
         elif raw_books == []:  # 0 matches in the last page
-            get_next_page = selectBook(books, mirrors, page - 1, end=True)
+            get_next_page = selectBook(books, mirrors, page - 1, n_books)
         else:  # 0 matches total
             get_next_page = False
