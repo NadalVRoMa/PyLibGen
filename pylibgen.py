@@ -10,7 +10,7 @@ from settings import *
 
 def getSearchResults(term, page, column):
     params = urlencode({'req': term, 'column': column, 'page': page})
-    url = 'http://libgen.io/search.php?&%s' %params
+    url = 'http://libgen.io/search.php?&%s' % params
 
     source = request.urlopen(url)
     soup = BeautifulSoup(source, 'lxml')
@@ -48,14 +48,14 @@ def formatBooks(books, page, n_authors, mc_authors, mc_title, mc_publisher):
         lang = book_attrs[6].text[:2]  # Show only 2 first characters
         size = book_attrs[7].text
         ext = book_attrs[8].text
-        io_mirror = []  # List of all the four mirrors
+        mirror_list = []  # List of all the four mirrors
         for mirror in range(9, 13):
-            io_mirror.append(book_attrs[mirror].a.attrs['href'])
+            mirror_list.append(book_attrs[mirror].a.attrs['href'])
 
         book = (str(i + 1), author, tinytitle, publisher,
                 year, lang, ext, size)  # Start at 1
 
-        book_mirrors = {'title': title, 'io': io_mirror}
+        book_mirrors = {'title': title, 'mirrors': mirror_list}
         books_mirrors.append(book_mirrors)
 
         fmt_books.append(book)
@@ -81,40 +81,53 @@ def selectBook(books, mirrors, page, down_path, end=False):
             if choice < len(books):  # Selection
                 title = '{}.{}'.format(
                     mirrors[choice]['title'], books[choice][-2])
-                if MULTIPLE_MIRRORS:    #If MULTIPLE_MIRRORS is True, prompt user to select a mirror.
-                    number_of_mirrors = 4;
+                    
+                if True:  
+                    ''' This is the default mirror.
+                    In the case we can get the other mirrors to work,
+                    change True to a boolean variable defined in settings.py
+                    that defines if the user want to have a option to 
+                    select from the different mirrors. ''' 
+                    DownloadBook.default_mirror(
+                        mirrors[choice]['mirrors'][0], title, down_path)
+                else:
+                    number_of_mirrors = 4
                     print(
-                        "\n #1: Mirror 1",
-                        "\n #2: Mirror 2",
-                        "\n #3: Mirror 3",
-                        "\n #4: Mirror 4",
+                        "\n #1: Mirror libgen.io (default)",
+                        "\n #2: Mirror libgen.pw",
+                        "\n #3: Mirror bookfi.net",
+                        "\n #4: Mirror b-ok",
                     )
                     while True:
-                        option = input('\n Type # of mirror to start download, or q to quit: ')
+                        option = input(
+                            '\n Type # of mirror to start download, or q to quit: ')
 
                         if option.isnumeric() and int(option) > 0 and int(option) <= number_of_mirrors:
                             if int(option) == 1:
-                                DownloadBook.default_mirror(mirrors[choice]['io'][0], title, down_path)
+                                DownloadBook.default_mirror(
+                                    mirrors[choice]['mirrors'][0], title, down_path)
                                 pass
                             elif int(option) == 2:
-                                DownloadBook.second_mirror(mirrors[choice]['io'][1], title, down_path)
+                                DownloadBook.second_mirror(
+                                    mirrors[choice]['mirrors'][1], title, down_path)
                                 pass
                             elif int(option) == 3:
-                                DownloadBook.third_mirror(mirrors[choice]['io'][2], title, down_path)
+                                DownloadBook.third_mirror(
+                                    mirrors[choice]['mirrors'][2], title, down_path)
                                 pass
                             elif int(option) == 4:
-                                DownloadBook.fourth_mirror(mirrors[choice]['io'][3], title, down_path)
+                                DownloadBook.fourth_mirror(
+                                    mirrors[choice]['mirrors'][3], title, down_path)
                                 pass
-                            
+
                             return(False)
-                            
+
                         elif option == 'q' or option == 'Q':  # Quit
                             return(False)
                         else:
                             print("Not a valid option.")
                             continue
-                else:   #If MULTIPLE_MIRRORS is False, use the default (first) mirror to download.
-                    DownloadBook.default_mirror(mirrors[choice]['io'][0], title, down_path)
+
                 return(False)
             else:
                 print("Too big of a number.")
@@ -138,7 +151,7 @@ class DownloadBook():
     connection = 'keep-alive'
 
     headers = {
-        'User-Agent' : user_agent,
+        'User-Agent': user_agent,
         'Accept': accept,
         'Accept-Charset': accept_charset,
         'Accept-Language': accept_lang,
@@ -148,7 +161,7 @@ class DownloadBook():
     def default_mirror(link, filename, down_path):
         '''This is the default (and first) mirror to download.
         The base of this mirror is http://libgen.io/ads.php?'''
-        req = request.Request(link, headers = DownloadBook.headers) 
+        req = request.Request(link, headers=DownloadBook.headers)
         source = request.urlopen(req)
         soup = BeautifulSoup(source, 'lxml')
 
@@ -183,6 +196,7 @@ class DownloadBook():
         The base of this mirror is http://b-ok.org/md5/*'''
         pass
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     column = parser.add_mutually_exclusive_group()
@@ -197,7 +211,7 @@ if __name__ == '__main__':
                         help='get books from the specified year')
 
     args = parser.parse_args()
-    
+
     search_term = ' '.join(args.search)
     search_arguments = [(args.title, 'title'),
                         (args.author, 'author'),
