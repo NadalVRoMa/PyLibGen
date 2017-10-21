@@ -78,7 +78,7 @@ def selectBook(books, mirrors, page, down_path, end=False):
 
         if elec.isnumeric():
             choice = int(elec) - 1
-            if choice < len(books):  # Selection
+            if choice < len(books) and choice >= 0:  # Selection
                 title = '{}.{}'.format(
                     mirrors[choice]['title'], books[choice][-2])
                     
@@ -130,7 +130,7 @@ def selectBook(books, mirrors, page, down_path, end=False):
 
                 return(False)
             else:
-                print("Too big of a number.")
+                print("Couldn't fetch the book #{}".format(str(choice + 1)))
                 continue
 
         elif elec == 'q' or elec == 'Q':  # Quit
