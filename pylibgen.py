@@ -48,7 +48,9 @@ def formatBooks(books, page, n_authors, mc_authors, mc_title, mc_publisher):
         lang = book_attrs[6].text[:2]  # Show only 2 first characters
         size = book_attrs[7].text
         ext = book_attrs[8].text
-        io_mirror = book_attrs[9].a.attrs['href']
+        io_mirror = []  # List of all the four mirrors
+        for mirror in range(9, 13):
+            io_mirror.append(book_attrs[mirror].a.attrs['href'])
 
         book = (str(i + 1), author, tinytitle, publisher,
                 year, lang, ext, size)  # Start at 1
@@ -79,7 +81,40 @@ def selectBook(books, mirrors, page, down_path, end=False):
             if choice < len(books):  # Selection
                 title = '{}.{}'.format(
                     mirrors[choice]['title'], books[choice][-2])
-                downloadBook(mirrors[choice]['io'], title, down_path)
+                if MULTIPLE_MIRRORS:    #If MULTIPLE_MIRRORS is True, prompt user to select a mirror.
+                    number_of_mirrors = 4;
+                    print(
+                        "\n #1: Mirror 1",
+                        "\n #2: Mirror 2",
+                        "\n #3: Mirror 3",
+                        "\n #4: Mirror 4",
+                    )
+                    while True:
+                        option = input('\n Type # of mirror to start download, or q to quit: ')
+
+                        if option.isnumeric() and int(option) > 0 and int(option) <= number_of_mirrors:
+                            if int(option) == 1:
+                                DownloadBook.default_mirror(mirrors[choice]['io'][0], title, down_path)
+                                pass
+                            elif int(option) == 2:
+                                DownloadBook.second_mirror(mirrors[choice]['io'][1], title, down_path)
+                                pass
+                            elif int(option) == 3:
+                                DownloadBook.third_mirror(mirrors[choice]['io'][2], title, down_path)
+                                pass
+                            elif int(option) == 4:
+                                DownloadBook.fourth_mirror(mirrors[choice]['io'][3], title, down_path)
+                                pass
+                            
+                            return(False)
+                            
+                        elif option == 'q' or option == 'Q':  # Quit
+                            return(False)
+                        else:
+                            print("Not a valid option.")
+                            continue
+                else:   #If MULTIPLE_MIRRORS is False, use the default (first) mirror to download.
+                    DownloadBook.default_mirror(mirrors[choice]['io'][0], title, down_path)
                 return(False)
             else:
                 print("Too big of a number.")
@@ -95,25 +130,58 @@ def selectBook(books, mirrors, page, down_path, end=False):
             print('Not a valid option.')
 
 
-def downloadBook(link, filename, down_path):
-    source = request.urlopen(link)
-    soup = BeautifulSoup(source, 'lxml')
+class DownloadBook():
+    user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11'
+    accept = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    accept_charset = 'ISO-8859-1,utf-8;q=0.7,*;q=0.3'
+    accept_lang = 'en-US,en;q=0.8'
+    connection = 'keep-alive'
 
-    for a in soup.find_all('a'):
-        if a.text == 'GET':
-            download_url = a.attrs['href']
-            break
+    headers = {
+        'User-Agent' : user_agent,
+        'Accept': accept,
+        'Accept-Charset': accept_charset,
+        'Accept-Language': accept_lang,
+        'Connection': connection,
+    }
 
-    if os.path.exists(down_path) and os.path.isdir(down_path):
-        print('Downloading...')
-        path = '{}/{}'.format(down_path, filename)
-        request.urlretrieve(download_url, filename=path)
-        print('Book downloaded to {}'.format(os.path.abspath(path)))
-    elif os.path.isfile(down_path):
-        print('The download path is not a directory. Change it in settings.py')
-    else:
-        print('The download path does not exist. Change it in settings.py')
+    def default_mirror(link, filename, down_path):
+        '''This is the default (and first) mirror to download.
+        The base of this mirror is http://libgen.io/ads.php?'''
+        req = request.Request(link, headers = DownloadBook.headers) 
+        source = request.urlopen(req)
+        soup = BeautifulSoup(source, 'lxml')
 
+        for a in soup.find_all('a'):
+            if a.text == 'GET':
+                download_url = a.attrs['href']
+                break
+
+        if os.path.exists(down_path) and os.path.isdir(down_path):
+            print('Downloading...')
+            path = '{}/{}'.format(down_path, filename)
+            request.urlretrieve(download_url, filename=path)
+            print('Book downloaded to {}'.format(os.path.abspath(path)))
+        elif os.path.isfile(down_path):
+            print('The download path is not a directory. Change it in settings.py')
+        else:
+            print('The download path does not exist. Change it in settings.py')
+
+    def second_mirror(link, filename, down_path):
+        '''This is the second mirror to download.
+        The base of this mirror is https://libgen.pw/view.php?*'''
+        link = link.replace("view", "download")
+        pass
+
+    def third_mirror(link, filename, down_path):
+        '''This is the third mirror to download.
+        The base of this mirror is http://en.bookfi.net/md5/*'''
+        pass
+
+    def fourth_mirror(link, filename, down_path):
+        '''This is the fourth mirror to download.
+        The base of this mirror is http://b-ok.org/md5/*'''
+        pass
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
