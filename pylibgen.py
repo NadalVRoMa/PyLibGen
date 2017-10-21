@@ -26,7 +26,7 @@ def getSearchResults(term, page, column):
     return(books)
 
 
-def formatBooks(books, page, n_authors, mc_authors, mc_title, mc_publisher):
+def formatBooks(books, page):
     # TODO: Add support for multiple choices
     fmt_books = []
     books_mirrors = []  # List of dics with complete titles and mirrors
@@ -37,13 +37,13 @@ def formatBooks(books, page, n_authors, mc_authors, mc_title, mc_publisher):
         book_attrs = rawbook.find_all('td')
 
         authors = [a.text for a in book_attrs[1].find_all('a')]
-        author = ', '.join(authors[:n_authors])
-        author = author[:mc_authors]
+        author = ', '.join(authors[:N_AUTHORS])
+        author = author[:MAX_CHARS_AUTHORS]
 
         title = book_attrs[2].find(title=True).text
-        tinytitle = title[:mc_title]
+        tinytitle = title[:MAX_CHARS_TITLE]
 
-        publisher = book_attrs[3].text[:mc_publisher]
+        publisher = book_attrs[3].text[:MAX_CHARS_PUBLISHER]
         year = book_attrs[4].text
         lang = book_attrs[6].text[:2]  # Show only 2 first characters
         size = book_attrs[7].text
@@ -63,7 +63,7 @@ def formatBooks(books, page, n_authors, mc_authors, mc_title, mc_publisher):
     return(fmt_books, books_mirrors)
 
 
-def selectBook(books, mirrors, page, down_path, end=False):
+def selectBook(books, mirrors, page, end=False):
     headers = ['#', 'Author', 'Title', 'Publisher',
                'Year', 'Lang', 'Ext', 'Size']
 
@@ -89,7 +89,7 @@ def selectBook(books, mirrors, page, down_path, end=False):
                     that defines if the user want to have a option to 
                     select from the different mirrors. ''' 
                     DownloadBook.default_mirror(
-                        mirrors[choice]['mirrors'][0], title, down_path)
+                        mirrors[choice]['mirrors'][0], title)
                 else:
                     number_of_mirrors = 4
                     print(
@@ -105,19 +105,19 @@ def selectBook(books, mirrors, page, down_path, end=False):
                         if option.isnumeric() and int(option) > 0 and int(option) <= number_of_mirrors:
                             if int(option) == 1:
                                 DownloadBook.default_mirror(
-                                    mirrors[choice]['mirrors'][0], title, down_path)
+                                    mirrors[choice]['mirrors'][0], title)
                                 pass
                             elif int(option) == 2:
                                 DownloadBook.second_mirror(
-                                    mirrors[choice]['mirrors'][1], title, down_path)
+                                    mirrors[choice]['mirrors'][1], title)
                                 pass
                             elif int(option) == 3:
                                 DownloadBook.third_mirror(
-                                    mirrors[choice]['mirrors'][2], title, down_path)
+                                    mirrors[choice]['mirrors'][2], title)
                                 pass
                             elif int(option) == 4:
                                 DownloadBook.fourth_mirror(
-                                    mirrors[choice]['mirrors'][3], title, down_path)
+                                    mirrors[choice]['mirrors'][3], title)
                                 pass
 
                             return(False)
@@ -158,7 +158,7 @@ class DownloadBook():
         'Connection': connection,
     }
 
-    def default_mirror(link, filename, down_path):
+    def default_mirror(link, filename):
         '''This is the default (and first) mirror to download.
         The base of this mirror is http://libgen.io/ads.php?'''
         req = request.Request(link, headers=DownloadBook.headers)
@@ -170,28 +170,28 @@ class DownloadBook():
                 download_url = a.attrs['href']
                 break
 
-        if os.path.exists(down_path) and os.path.isdir(down_path):
+        if os.path.exists(DOWNLOAD_PATH) and os.path.isdir(DOWNLOAD_PATH):
             print('Downloading...')
-            path = '{}/{}'.format(down_path, filename)
+            path = '{}/{}'.format(DOWNLOAD_PATH, filename)
             request.urlretrieve(download_url, filename=path)
             print('Book downloaded to {}'.format(os.path.abspath(path)))
-        elif os.path.isfile(down_path):
+        elif os.path.isfile(DOWNLOAD_PATH):
             print('The download path is not a directory. Change it in settings.py')
         else:
             print('The download path does not exist. Change it in settings.py')
 
-    def second_mirror(link, filename, down_path):
+    def second_mirror(link, filename):
         '''This is the second mirror to download.
         The base of this mirror is https://libgen.pw/view.php?*'''
         link = link.replace("view", "download")
         pass
 
-    def third_mirror(link, filename, down_path):
+    def third_mirror(link, filename):
         '''This is the third mirror to download.
         The base of this mirror is http://en.bookfi.net/md5/*'''
         pass
 
-    def fourth_mirror(link, filename, down_path):
+    def fourth_mirror(link, filename):
         '''This is the fourth mirror to download.
         The base of this mirror is http://b-ok.org/md5/*'''
         pass
@@ -231,14 +231,12 @@ if __name__ == '__main__':
     while get_next_page:
         raw_books = getSearchResults(search_term, page, sel_column)
         if raw_books:
-            new_books, new_mirrors = formatBooks(
-                raw_books, page, N_AUTHORS, MAX_CHARS_AUTHORS, MAX_CHARS_TITLE, MAX_CHARS_PUBLISHER)
+            new_books, new_mirrors = formatBooks(raw_books, page)
             books += new_books
             mirrors += new_mirrors
-            get_next_page = selectBook(books, mirrors, page, DOWNLOAD_PATH)
+            get_next_page = selectBook(books, mirrors, page)
             page += 1
         elif raw_books == []:  # 0 matches in the last page
-            get_next_page = selectBook(
-                books, mirrors, page - 1, DOWNLOAD_PATH, end=True)
+            get_next_page = selectBook(books, mirrors, page - 1, end=True)
         else:  # 0 matches total
             get_next_page = False
