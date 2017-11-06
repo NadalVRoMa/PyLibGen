@@ -18,8 +18,6 @@ def getSearchResults(term, page, column):
         books_found = re.search(r'(\d+) books found', str(soup))
         print(books_found.group().upper())
         n_books = int(books_found.groups()[0])
-        if n_books == 0:
-            return(False)
 
     page_books = soup.find_all('tr')
     page_books = page_books[3:-1]  # Ignore 3 first and the last <tr> label.
@@ -31,7 +29,6 @@ def getSearchResults(term, page, column):
 
 
 def formatBooks(books, page):
-    # TODO: Add support for multiple choices
     fmt_books = []
     books_mirrors = []  # List of dics with complete titles and mirrors
 
@@ -244,8 +241,7 @@ if __name__ == '__main__':
 
     while get_next_page:
         if page == 1:
-            raw_books, n_books = getSearchResults(
-                search_term, page, sel_column)
+            raw_books, n_books = getSearchResults(search_term, page, sel_column)
         else:
             raw_books = getSearchResults(search_term, page, sel_column)
 
@@ -255,7 +251,7 @@ if __name__ == '__main__':
             mirrors += new_mirrors
             get_next_page = selectBook(books, mirrors, page, n_books)
             page += 1
-        elif raw_books == []:  # 0 matches in the last page
+        elif raw_books == [] and n_books != 0:  # 0 matches in the last page
             get_next_page = selectBook(books, mirrors, page - 1, n_books)
         else:  # 0 matches total
             get_next_page = False
