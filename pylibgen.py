@@ -175,11 +175,21 @@ class DownloadBook():
         req = request.Request(link, headers=DownloadBook.headers)
         source = request.urlopen(req)
         soup = BeautifulSoup(source, 'lxml')
+        mother_link = "https://libgen.pw"
 
         for a in soup.find_all('a'):
-            if a.text == 'GET':
-                download_url = a.attrs['href']
+            if a.text == 'Open download':
+                item_url = a.attrs['href']
+                getpage_url = mother_link + item_url
+                req2 = request.Request(getpage_url, headers=DownloadBook.headers)
+                source2 = request.urlopen(req2)
+                soup2 = BeautifulSoup(source2, 'lxml')
+
+        for a in soup2.find_all('a'):
+            if a.text == 'Get':
+                download_url = mother_link + a.attrs['href']
                 break
+
 
         if os.path.exists(DOWNLOAD_PATH) and os.path.isdir(DOWNLOAD_PATH):
             print('Downloading...')
