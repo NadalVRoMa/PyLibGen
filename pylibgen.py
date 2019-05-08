@@ -31,35 +31,37 @@ def getSearchResults(term, page, column):
 def formatBooks(books, page):
     fmt_books = []
     books_mirrors = []  # List of dics with complete titles and mirrors
-
-    for i, rawbook in enumerate(books):
-        i += (page - 1) * 25
-
+    cont_book = (page - 1)*25 + 1
+    for rawbook in books:
+        
         book_attrs = rawbook.find_all('td')
 
-        authors = [a.text for a in book_attrs[1].find_all('a')]
-        author = ', '.join(authors[:N_AUTHORS])
-        author = author[:MAX_CHARS_AUTHORS]
+        if len(book_attrs) >= 14: 
+            authors = [a.text for a in book_attrs[1].find_all('a')]
+            author = ', '.join(authors[:N_AUTHORS])
+            author = author[:MAX_CHARS_AUTHORS]
 
-        title = book_attrs[2].find(title=True).text
-        tinytitle = title[:MAX_CHARS_TITLE]
+            title = book_attrs[2].find(title=True).text
+            tinytitle = title[:MAX_CHARS_TITLE]
 
-        publisher = book_attrs[3].text[:MAX_CHARS_PUBLISHER]
-        year = book_attrs[4].text
-        lang = book_attrs[6].text[:2]  # Show only 2 first characters
-        size = book_attrs[7].text
-        ext = book_attrs[8].text
-        mirror_list = []  # List of all the four mirrors
-        for mirror in range(9, 13):
-            mirror_list.append(book_attrs[mirror].a.attrs['href'])
+            publisher = book_attrs[3].text[:MAX_CHARS_PUBLISHER]
+            year = book_attrs[4].text
+            lang = book_attrs[6].text[:2]  # Show only 2 first characters
+            size = book_attrs[7].text
+            ext = book_attrs[8].text
+            mirror_list = {}  # Dictionary of all the four mirrors
+            for i in range(10, 15):
+                mirror = i - 10
+                if book_attrs[i].a:
+                    mirror_list[mirror] = book_attrs[i].a.attrs['href']
 
-        book = (str(i + 1), author, tinytitle, publisher,
-                year, lang, ext, size)  # Start at 1
+            book = (str(cont_book), author, tinytitle, publisher,
+                    year, lang, ext, size)  # Start at 1
 
-        book_mirrors = {'title': title, 'mirrors': mirror_list}
-        books_mirrors.append(book_mirrors)
-
-        fmt_books.append(book)
+            book_mirrors = {'title': title, 'mirrors': mirror_list}
+            books_mirrors.append(book_mirrors)
+            cont_book += 1
+            fmt_books.append(book)
 
     return(fmt_books, books_mirrors)
 
@@ -88,7 +90,7 @@ def selectBook(books, mirrors, page, n_books):
                 title = '{}.{}'.format(
                     mirrors[choice]['title'], books[choice][-2])
 
-                if True:
+                if False:
                     ''' This is the default mirror.
                     In the case we can get the other mirrors to work,
                     change True to a boolean variable defined in settings.py
@@ -97,14 +99,20 @@ def selectBook(books, mirrors, page, n_books):
                     DownloadBook.default_mirror(
                         mirrors[choice]['mirrors'][0], title)
                 else:
-                    number_of_mirrors = 4
-                    print(
-                        "\n #1: Mirror libgen.io (default)",
-                        "\n #2: Mirror libgen.pw",
-                        "\n #3: Mirror bookfi.net",
-                        "\n #4: Mirror b-ok",
-                    )
-                    while True:
+                    number_of_mirrors = len(mirrors[choice]['mirrors'])
+                    print_list = (
+                        "#1: Mirror bookdescr.org (default)",
+                        "#2: Mirror libgen.me",
+                        "#3: Mirror library1.org",
+                        "#4: Mirror b-ok.cc",
+                        "#5: Mirror bookfi.net")
+
+                    while SHOW_MIRRORS:
+                        print("\nMirrors Available: \n")
+                        ava_mirrors = list(mirrors[choice]['mirrors'].keys())
+                        for mir in ava_mirrors:
+                            print(print_list[mir])
+
                         option = input(
                             '\nType # of mirror to start download or q to quit: ')
 
@@ -125,6 +133,9 @@ def selectBook(books, mirrors, page, n_books):
                                 DownloadBook.fourth_mirror(
                                     mirrors[choice]['mirrors'][3], title)
                                 pass
+                            elif int(option) == 5:
+                                DownloadBook.fifth_mirror(
+                                    mirrors[choice]['mirrors'][4], title)
 
                             return(False)
 
@@ -169,53 +180,95 @@ class DownloadBook():
         'Connection': connection,
     }
 
-    def default_mirror(link, filename):
-        '''This is the default (and first) mirror to download.
-        The base of this mirror is http://libgen.io/ads.php?'''
-        req = request.Request(link, headers=DownloadBook.headers)
-        source = request.urlopen(req)
-        soup = BeautifulSoup(source, 'lxml')
-        mother_link = "https://libgen.pw"
-
-        for a in soup.find_all('a'):
-            if a.text == 'Open download':
-                item_url = a.attrs['href']
-                getpage_url = mother_link + item_url
-                req2 = request.Request(getpage_url, headers=DownloadBook.headers)
-                source2 = request.urlopen(req2)
-                soup2 = BeautifulSoup(source2, 'lxml')
-
-        for a in soup2.find_all('a'):
-            if a.text == 'Get':
-                download_url = mother_link + a.attrs['href']
-                break
-
-
+    def save_book(download_link, file_name):
         if os.path.exists(DOWNLOAD_PATH) and os.path.isdir(DOWNLOAD_PATH):
+            bad_chars = '\/:*?"<>|'
+            for char in bad_chars:
+                file_name = file_name.replace(char, " ")
             print('Downloading...')
-            path = '{}/{}'.format(DOWNLOAD_PATH, filename)
-            request.urlretrieve(download_url, filename=path)
+            path = '{}/{}'.format(DOWNLOAD_PATH, file_name)
+            request.urlretrieve(download_link, filename=path)
             print('Book downloaded to {}'.format(os.path.abspath(path)))
         elif os.path.isfile(DOWNLOAD_PATH):
             print('The download path is not a directory. Change it in settings.py')
         else:
             print('The download path does not exist. Change it in settings.py')
 
+    def default_mirror(link, filename):
+        '''This is the default (and first) mirror to download.
+        The base of this mirror is http://booksdescr.org'''
+        req = request.Request(link, headers=DownloadBook.headers)
+        source = request.urlopen(req)
+        soup = BeautifulSoup(source, 'lxml')
+
+        for a in soup.find_all('a'):
+            if a.text == 'Libgen':
+                download_url = a.attrs['href']
+                DownloadBook.save_book(download_url, filename)
+
+
     def second_mirror(link, filename):
         '''This is the second mirror to download.
-        The base of this mirror is https://libgen.pw/view.php?*'''
-        link = link.replace("view", "download")
-        pass
+        The base of this mirror is https://libgen.me'''
+        req = request.Request(link, headers=DownloadBook.headers)
+        source = request.urlopen(req)
+        soup = BeautifulSoup(source, 'lxml')
+        mother_url = "https://libgen.me"
+
+        for a in soup.find_all('a'):
+            if a.text == 'Get from vault':
+                next_link = a.attrs['href']
+                next_req = request.Request(mother_url + next_link, headers=DownloadBook.headers)
+                next_source = request.urlopen(next_req)
+                next_soup = BeautifulSoup(next_source, 'lxml')
+                for next_a in next_soup.find_all('a'):
+                    if next_a.text == 'Get':
+                        item_url = next_a.attrs['href']
+                        DownloadBook.save_book(item_url, filename)
 
     def third_mirror(link, filename):
         '''This is the third mirror to download.
-        The base of this mirror is http://en.bookfi.net/md5/*'''
-        pass
+        The base of this mirror is http://library1.org'''
+        req = request.Request(link, headers=DownloadBook.headers)
+        source = request.urlopen(req)
+        soup = BeautifulSoup(source, 'lxml')
+
+        for a in soup.find_all('a'):
+            if a.text == 'GET':
+                download_url = a.attrs['href']
+                DownloadBook.save_book(download_url, filename)
 
     def fourth_mirror(link, filename):
         '''This is the fourth mirror to download.
-        The base of this mirror is http://b-ok.org/md5/*'''
-        pass
+        The base of this mirror is https://b-ok.cc'''
+        req = request.Request(link, headers=DownloadBook.headers)
+        source = request.urlopen(req)
+        soup = BeautifulSoup(source, 'lxml')
+        mother_url = "https://b-ok.cc"
+
+        for a in soup.find_all('a'):
+            if a.text == 'DOWNLOAD':
+                next_link = a.attrs['href']
+                next_req = request.Request(mother_url + next_link, headers=DownloadBook.headers)
+                next_source = request.urlopen(next_req)
+                next_soup = BeautifulSoup(next_source, 'lxml')
+                for next_a in next_soup.find_all('a'):
+                    if ' Download  ' in next_a.text:
+                        item_url = next_a.attrs['href']
+                        DownloadBook.save_book(mother_url + item_url, filename)
+
+    def fifth_mirror(link, filename):
+        '''This is the fifth mirror to download.
+        The base of this mirror is https://bookfi.net'''
+        req = request.Request(link, headers=DownloadBook.headers)
+        source = request.urlopen(req)
+        soup = BeautifulSoup(source, 'lxml')
+
+        for a in soup.find_all('a'):
+            if 'Скачать' in a.text:
+                download_url = a.attrs['href']
+                DownloadBook.save_book(download_url, filename) 
+
 
 
 if __name__ == '__main__':
@@ -254,6 +307,7 @@ if __name__ == '__main__':
             raw_books, n_books = getSearchResults(search_term, page, sel_column)
         else:
             raw_books = getSearchResults(search_term, page, sel_column)
+
 
         if raw_books:
             new_books, new_mirrors = formatBooks(raw_books, page)
